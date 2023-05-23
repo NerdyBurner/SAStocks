@@ -198,7 +198,7 @@ def get_rsi(ticker, polygon_key):
     rsi_response = requests_get_with_retry(rsi_url)
     if rsi_response.status_code == 200:
         rsi_data = rsi_response.json()['results']['values']
-        return rsi_data if rsi_data else None
+        return rsi_data[0]['value'] if rsi_data else None  # Return the most recent value
     else:
         print(f"Error in get_rsi() for ticker {ticker}: {rsi_response.status_code}")
         return None
@@ -208,7 +208,7 @@ def get_macd(ticker, polygon_key):
     macd_response = requests_get_with_retry(macd_url)
     if macd_response.status_code == 200:
         macd_data = macd_response.json()['results']['values']
-        return macd_data if macd_data else None
+        return macd_data[0]['value'] if macd_data else None  # Return the most recent value
     else:
         print(f"Error in get_macd() for ticker {ticker}: {macd_response.status_code}")
         return None
@@ -341,6 +341,7 @@ def main():
         # Analyze news articles for all tickers
         print("Conducting sentiment analysis and scoring")
         for i, ticker in enumerate(tickers, start=1):
+            print(f"Processing ticker #{i}: {ticker}")
             # Skip tickers that have been processed already
             if ticker in processed_tickers:
                 continue
