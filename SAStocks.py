@@ -275,7 +275,7 @@ def save_to_db(date, ticker, vader_sentiment, gpt_sentiment, gpt_response, histo
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
     connection.cursor().execute(query, (date, ticker, vader_sentiment, gpt_sentiment, gpt_response, historical_price_high, historical_price_low, historical_price_avg, aggregated_score, recent_price, rsi, macd))
-    connection.commit()
+    connection.commit()  # commit right after inserting data for a ticker
 
 def print_report(report_data):
     print("Here is your report:")
