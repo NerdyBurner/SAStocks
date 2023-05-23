@@ -15,6 +15,29 @@ nltk.download('punkt')
 nltk.download('stopwords')
 nltk.download('averaged_perceptron_tagger')
 nltk.download('vader_lexicon')
+import pickle
+import os
+import logging
+
+def save_state(processed_tickers, report_data):
+    state = {"processed_tickers": processed_tickers, "report_data": report_data}
+    with open("state.pkl", "wb") as f:
+        pickle.dump(state, f)
+
+def load_state():
+    if os.path.exists("state.pkl"):
+        with open("state.pkl", "rb") as f:
+            state = pickle.load(f)
+        return state["processed_tickers"], state["report_data"]
+    else:
+        return [], []
+
+# Configure logging
+logging.basicConfig(filename='app.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+
+# Replace print statements with logging statements
+logging.info("This is an info message")
+logging.error("This is an error message")
 
 # Load API keys from CSV
 keys_df = pd.read_csv('api_keys.csv')
@@ -138,7 +161,7 @@ def vader_sentiment_analysis(ticker):
                 sentiment_scores.append("Neutral")
     return sentiment_scores
 
-def gpt_sentiment_analysis(ticker, max_retries=3, retry_delay=1.0):
+def gpt_sentiment_analysis(ticker, max_retries=4, retry_delay=2.0):
     news_articles = get_news_from_db(ticker)
     sentiment_scores = []
     for date, title, description in news_articles:
@@ -269,38 +292,64 @@ def main():
     sentiment_scores = {"Good": 1, "Neutral": 0, "UNKNOWN": 0, "ERROR": 0, "Error": 0, "Bad": -1}
 
     try:
+        # Load state
+        try:
+            with open("state.pkl", "rb") as f:
+                state = pickle.load(f)
+            processed_tickers = state["processed_tickers"]
+            report_data = state["report_data"]
+        except FileNotFoundError:
+            processed_tickers = []
+            report_data = []
+
         # Load tickers
         print("Starting Analysis - Reading Tickers.csv")
         tickers = load_tickers()
         print(f"Loaded {len(tickers)} tickers.")
-
         if not tickers:
             print("No tickers found. Exiting.")
             return
+        
+        report_data = []
 
-        # Process news articles for all tickers
+        # Initialize dictionaries to store news, RSI, and MACD data for each ticker
+        news_data = {}
+        rsi_data = {}
+        macd_data = {}
+
+        # Download news articles for all tickers
         print("Importing and Filtering News from Polygon.io for all tickers")
         for i, ticker in enumerate(tickers, start=1):
+            if ticker in processed_tickers:
+                continue  # Skip tickers that have been processed already
             print(f"\nImporting news for ticker #{i}: {ticker}")
             news = get_stock_news(ticker)
             print(f"Loaded and saved {len(news)} news articles for {ticker} in the database.")
             print(f"Finished importing and filtering news. Total articles: {len(ticker_articles)}")
-            report_data = []
-        
-        # Process each ticker
-        for i, ticker in enumerate(tickers, start=1):
-            print(f"\nProcessing ticker #{i}: {ticker}")
+
+            # Save the news articles for this ticker
+            news_data[ticker] = news
 
             # Get RSI and MACD
-            rsi_data = get_rsi(ticker, polygon_key)
-            macd_data = get_macd(ticker, polygon_key)
+            rsi = get_rsi(ticker, polygon_key)
+            macd = get_macd(ticker, polygon_key)
 
-            # Extract the most recent value
-            rsi = rsi_data[0]['value'] if rsi_data else None
-            macd = macd_data[0]['value'] if macd_data else None
+            # Save the RSI and MACD data for this ticker
+            rsi_data[ticker] = rsi
+            macd_data[ticker] = macd
 
-            # Process news articles
-            print("Conducting sentiment analysis and scoring")
+        # Analyze news articles for all tickers
+        print("Conducting sentiment analysis and scoring")
+        for i, ticker in enumerate(tickers, start=1):
+            # Skip tickers that have been processed already
+            if ticker in processed_tickers:
+                continue
+
+            # Get the news, RSI, and MACD data for this ticker
+            news = news_data[ticker]
+            rsi = rsi_data[ticker]
+            macd = macd_data[ticker]
+
             vader_sentiments = vader_sentiment_analysis(ticker)
             gpt_sentiments = gpt_sentiment_analysis(ticker)
             # Skip ticker if no articles were processed
@@ -313,7 +362,6 @@ def main():
 
             # Calculate scores and save to database
             historical_price_high, historical_price_low, historical_price_avg = get_historical_price(ticker)
-
             # Now that all articles have been processed, calculate the aggregated score
             vader_total = sum([sentiment_scores[sentiment] for sentiment in vader_sentiments])
             gpt_total = sum([sentiment_scores[sentiment] for sentiment in gpt_sentiments])
@@ -327,6 +375,12 @@ def main():
 
             print(f"Finished Processing Ticker #{i}: {ticker}")
 
+            # After processing each ticker, add it to the list of processed tickers and save the state
+            processed_tickers.append(ticker)
+            state = {"processed_tickers": processed_tickers, "report_data": report_data}
+            with open("state.pkl", "wb") as f:
+                pickle.dump(state, f)
+
         # Sort the report data by score in descending order
         report_data.sort(key=lambda x: x[1], reverse=True)
 
@@ -339,3 +393,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
