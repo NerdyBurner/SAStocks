@@ -1,11 +1,17 @@
 Readme File: Stock Market Sentiment Analysis Script using Polygon.io and OPEN.ai CHAT-GPT 3.5-Turbo
 
 Application Functional Summary
-This application is a sentiment analysis tool for stock market news. It uses both the Vader sentiment analysis tool from the Natural Language Toolkit (NLTK) and the OpenAI API to analyze the sentiment of news articles related to specific stock tickers.
 
-The application pulls API keys from a CSV file named api_keys.csv where each key is stored as a row. The keys that it uses are for OpenAI and Polygon.io. Stock tickers are obtained from a CSV file named Tickers.csv.
+config.py: This script sets up the configuration for the project, including environment variables for the OpenAI and Polygon API keys, and the names of the SQLite database and the CSV file containing the stock tickers.
 
-The application saves news articles and sentiment analysis results to SQLite databases, and it also prints a final report with the aggregated sentiment scores for all stock tickers.
+database.py: This script is used to interact with a SQLite database. It includes a Database class with methods for saving and retrieving articles and sentiment scores.
+
+api.py: This script fetches stock tickers from a CSV file and retrieves news related to those tickers from the Polygon.io API.
+
+sentiment_analysis.py: This script performs sentiment analysis on the news articles fetched by the api.py script. It uses either the VADER sentiment analysis tool from NLTK or the OpenAI API to analyze the sentiment of the articles.
+
+These scripts work together to fetch news related to a list of stock tickers, perform sentiment analysis on these news articles, and store both the articles and the sentiment scores in a SQLite database. The sentiment analysis can be performed by either NLTK's VADER or OpenAI's GPT-3.5-turbo, depending on the requirements of the task. Configuration for the project, such as API keys and filenames, is managed by the config.py script.
+
 
 Required or Suggested Programs
 Python 3.6 or higher is required to run this application. You'll also need several Python libraries, including pandas, nltk, requests, sqlite3, openai, and retrying. You can install these libraries using pip:
@@ -15,21 +21,15 @@ pip install pandas nltk requests sqlite3 openai retrying
 API Keys and Websites
 You'll need API keys for the following services:
 
-OpenAI: You can get an API key by creating an account on the OpenAI website (https://www.openai.com/). The cost is $20 per month plus additional charges based on usage.
+OpenAI: You can get an API key by creating an account on the OpenAI website (https://www.openai.com/). The cost is $20 per month plus additional charges based on usage - You pay per token using the gpt-3.5-turbo rates (subject to change, check open.ai)
 
 Polygon.io: You can get an API key by creating an account on the Polygon.io website (https://polygon.io/). The cost is $30 per month.
 
 Areas for Improvement
-Aggregated Scores Algorithm: The current algorithm for calculating the aggregated score is quite simple, and it might not accurately reflect the actual sentiment of the news articles. This could be improved by using a more sophisticated sentiment scoring algorithm, perhaps one that takes into account more nuanced aspects of the news articles.
-
-GPT Prompt: The prompt used for GPT-3 could potentially be improved. Currently, it asks the model to categorize the sentiment of an article as 'Good', 'Bad', or 'Unknown'. This could be expanded to include more nuanced sentiments, or to ask for a more detailed analysis of the article.
-
-Expanding the Inputs to the Sentiment Analysis: Currently, the application only considers the title and description of each news article for sentiment analysis. This could be expanded to include other elements of the articles, such as the main body text, or even comments on the article if available.
-
-Expand to More Data Sources: Currently, the application only uses news articles from Polygon.io. It might be beneficial to include more data sources to get a more comprehensive view of the sentiment around each stock ticker.
-
-Error Handling and Logging: While the application does some error handling, it could be improved by adding more detailed logging, so that if something goes wrong, it's easier to diagnose the problem.
-
-Code Optimization: Some parts of the code could potentially be optimized for better performance, especially the parts that involve making requests to external APIs or querying the database.
+Code is currently being optimized - thanks to all involved
+Model can be tuned with additional inputs and prompt clarification
+Offline model to be generated
+Gpt-4 analysis to be considered
+Further improvements TBD - You are welcome to contribute!
 
 Remember to always keep your API keys secure and never share them publicly.
