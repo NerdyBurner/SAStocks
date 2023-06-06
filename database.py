@@ -1,11 +1,14 @@
-
+#Build as of 6.5.23
 import sqlite3
 from config import Config
+import datetime
+from typing import List
 
 class Database:
     def __init__(self):
         self.connection = sqlite3.connect(Config.DATABASE_NAME)
         self.create_tables()
+        self.cursor = self.connection.cursor()
 
     def create_tables(self):
         cursor = self.connection.cursor()
@@ -67,19 +70,20 @@ class Database:
         except Exception as e:
             print(f"Error saving sentiment: {str(e)}")
 
-    def save_financial_data(self, data):
-        try:
-            cursor = self.connection.cursor()
-            cursor.execute('''
-                INSERT INTO financial_data (ticker, rsi, macd, historical_price_high, historical_price_low, 
-                historical_price_avg, recent_price, vader_score, gpt3_score, final_score, timestamp) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (data['ticker'], data['rsi'], data['macd'], data['historical_price_high'], data['historical_price_low'], 
-                  data['historical_price_avg'], data['recent_price'], data['vader_score'], data['gpt3_score'], 
-                  data['final_score'], data['timestamp']))
-            self.connection.commit()
-        except Exception as e:
-            print(f"Error saving financial data: {str(e)}")
+    def save_financial_data(self, ticker: str, rsi: float, macd: float, prices: List[float], final_score: float):
+        data = {
+            'ticker': ticker,
+            'rsi': rsi,
+            'macd': macd,
+            'close_price': prices[-1] if prices else None,
+            'final_score': final_score,
+            'date': datetime.date.today().isoformat(),
+        }
+        self.cursor.execute("""
+            INSERT INTO financial_data (ticker, rsi, macd, close_price, final_score, date)
+            VALUES (:ticker, :rsi, :macd, :close_price, :final_score, :date)
+        """, data)
+        self.connection.commit()
 
     # Rest of the methods (get_article, get_sentiment, get_all_articles, get_all_sentiments, get_financial_data) go here...
     def get_article(self, id):
@@ -106,3 +110,11 @@ class Database:
         cursor = self.connection.cursor()
         cursor.execute('SELECT * FROM financial_data WHERE ticker = ?', (ticker,))
         return cursor.fetchone() 
+    
+    def fetch_financial_report(self):
+        self.cursor.execute("""
+            SELECT ticker, recent_price, rsi, macd, vader_score, gpt3_score, final_score
+            FROM financial_data
+            ORDER BY final_score DESC
+        """)
+        return self.cursor.fetchall()
